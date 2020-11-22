@@ -13,7 +13,7 @@ from langdetect import detect
 
 
 
-def info_parser(parent_dir, pages = 300, tsv_folder = "tsv_folder" , links = "Links", url = "url"):
+def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links = "Links", url = "url"):
 
 
     """Extracts books information, check them with langdetect and creates the .tsv files in /tsv_articles.
@@ -23,7 +23,7 @@ def info_parser(parent_dir, pages = 300, tsv_folder = "tsv_folder" , links = "Li
 
 	parent_dir (string) : The main path of your working enviorment. All of the folders and files should be here. Example : C:/Users/Desktop/ALGORITHMIC METHODS OF DATA MINING AND LABORATORY/"
         pages (int, optional): Number of pages to parse. Defaults to 300.
-	tsv_folder (string, optional) : The name of the folder you are willing to store the .tsv files. Defaults to "tsv_folder"
+	tsv_articles (string, optional) : The name of the folder you are willing to store the .tsv files. Defaults to "tsv_articles"
 	links (string, optional) : The name of the main folder you have stored your html files. Defaults to "Links"
 	Urls (string, optional) : The name of the text file you have stored your html urls. Defaults to "url"
 
@@ -58,7 +58,7 @@ def info_parser(parent_dir, pages = 300, tsv_folder = "tsv_folder" , links = "Li
             m = i
 
             file_name = "article_" + str(i+1) + ".html"
-            myfile = parent_dir + "/" + links "/" + directory + "/" + file_name
+            myfile = parent_dir + "/" + links + "/" + directory + "/" + file_name
             soup = BeautifulSoup(open(myfile, 'r', encoding="utf8"), features='lxml')
             
     
