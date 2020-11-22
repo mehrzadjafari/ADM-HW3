@@ -224,4 +224,4 @@ def info_parser(parent_dir, pages = 300, tsv_folder = "tsv_folder" , links = "Li
 
 
     out_file.close()
-
+    print("All tsv files generated sucessfully in " + tsv_folder + " directory") 
