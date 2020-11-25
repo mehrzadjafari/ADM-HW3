@@ -224,4 +224,43 @@ def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links =
 
 
     out_file.close()
-    print("All tsv files generated sucessfully in " + tsv_folder + " directory") 
+    print("All tsv files generated sucessfully in " + tsv_folder + " directory")
+	
+def Search_Engine(query = input().split()):
+    
+    #stem the tokens of the query in order to create a new query: my_query
+    my_query = []
+    for tok in query:
+        my_query.append(ps.stem(tok))
+
+    #create a new dictionary which contains just the keys present in my_query        
+    my_invertedId = {}
+    for tok in my_query:
+        if tok in vocabulary:
+            my_invertedId[tok] = my_dict.get(vocabulary[tok])
+            
+    #if any of the query's tokens is not present into the vocabulary, give an Error Message to the user
+        elif tok not in vocabulary:
+            print("The query is not present in any plot")
+            return([])
+      
+    #define a list of sets where each set represents the documents that contain each token of the query
+    my_sets = []
+    for key in my_invertedId:
+        my_sets.append(set(my_invertedId[key]))
+    result = set()
+
+    for i in range(1, 30001):
+        result.add('document_'+str(i))
+        
+    for my_set in my_sets:
+        result = result.intersection(my_set)
+    
+    if result == set():
+        print("The query is not present in any plot")
+        return([])
+    else:
+        return(result)
+
+found = list(Search_Engine())
+
