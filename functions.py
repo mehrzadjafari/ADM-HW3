@@ -231,7 +231,7 @@ def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links =
     out_file.close()
     print("All tsv files generated sucessfully in " + tsv_folder + " directory")
 	
-def Search_Engine(query = input().split()):
+def Search_Engine(query):
     
     #stem the tokens of the query in order to create a new query: my_query
     my_query = []
