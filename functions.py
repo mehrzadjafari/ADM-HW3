@@ -9,6 +9,7 @@ import lxml
 import csv
 import re
 import os
+import pandas as pd
 from langdetect import detect
 import nltk
 from nltk.tokenize import RegexpTokenizer
@@ -265,6 +266,3 @@ def Search_Engine(query = input().split()):
         return([])
     else:
         return(result)
-
-found = list(Search_Engine())
-
