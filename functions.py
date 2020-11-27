@@ -265,4 +265,27 @@ def Search_Engine(query):
         print("The query is not present in any plot")
         return([])
     else:
-        return(result)
+        found = list(result)
+
+        my_dict1 = {}
+        for i in range(1,30001):
+            directory = "article_" + str(i) + ".tsv"
+            path = functions.os.path.join(parent_dir, directory)
+            if functions.os.path.exists(path):
+                my_dict1["document_"+str(i)] = "article_"+str(i)
+
+
+        i = 0
+        for item in found:
+            directory = my_dict1[item]+".tsv"
+            path = functions.os.path.join(parent_dir, directory)
+            if i == 0:
+                data = functions.pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url'])
+            else:
+                data = data.append(functions.pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url']))
+               
+            data = data.rename(index = {0:'book_'+str(i+1)})
+            
+            i+=1
+                            
+        return(data)
