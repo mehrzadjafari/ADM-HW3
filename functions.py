@@ -9,6 +9,7 @@ import lxml
 import csv
 import re
 import os
+import pandas as pd
 from langdetect import detect
 import nltk
 from nltk.tokenize import RegexpTokenizer
@@ -231,6 +232,7 @@ def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links =
 
 
     out_file.close()
+
     print("All tsv files generated sucessfully in " + tsv_folder + " directory") 
 
 
@@ -389,4 +391,70 @@ def create_dictionary_plot(df, export_json = True):
     else:
         return my_dict, vocabulary
 
+
+
+    print("All tsv files generated sucessfully in " + tsv_folder + " directory")
+	
+
+
+
+
+def Search_Engine(query):
+    
+    #stem the tokens of the query in order to create a new query: my_query
+    my_query = []
+    for tok in query:
+        my_query.append(ps.stem(tok))
+
+    #create a new dictionary which contains just the keys present in my_query        
+    my_invertedId = {}
+    for tok in my_query:
+        if tok in vocabulary:
+            my_invertedId[tok] = my_dict.get(vocabulary[tok])
+            
+    #if any of the query's tokens is not present into the vocabulary, give an Error Message to the user
+        elif tok not in vocabulary:
+            print("The query is not present in any plot")
+            return([])
+      
+    #define a list of sets where each set represents the documents that contain each token of the query
+    my_sets = []
+    for key in my_invertedId:
+        my_sets.append(set(my_invertedId[key]))
+    result = set()
+
+    for i in range(1, 30001):
+        result.add('document_'+str(i))
+        
+    for my_set in my_sets:
+        result = result.intersection(my_set)
+    
+    if result == set():
+        print("The query is not present in any plot")
+        return([])
+    else:
+        found = list(result)
+
+        my_dict1 = {}
+        for i in range(1,30001):
+            directory = "article_" + str(i) + ".tsv"
+            path = functions.os.path.join(parent_dir, directory)
+            if functions.os.path.exists(path):
+                my_dict1["document_"+str(i)] = "article_"+str(i)
+
+
+        i = 0
+        for item in found:
+            directory = my_dict1[item]+".tsv"
+            path = functions.os.path.join(parent_dir, directory)
+            if i == 0:
+                data = functions.pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url'])
+            else:
+                data = data.append(functions.pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url']))
+               
+            data = data.rename(index = {0:'book_'+str(i+1)})
+            
+            i+=1
+                            
+        return(data)
 
