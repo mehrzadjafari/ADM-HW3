@@ -43,7 +43,7 @@ def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links =
     
     
     
-    for j in range(pages):
+    for j in range(300):
         
         n = j
         directory = 'Page_' + str(n + 1)
@@ -219,7 +219,7 @@ def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links =
 
                 with open(out_path_tsv, 'wt', encoding="utf8") as out_file:
                     tsv_writer = csv.writer(out_file, delimiter='\t')
-                    tsv_writer.writerow(['bookTitle', 'bookAuthors', 'ratingValue', 'ratingCount', 'reviewCount', 'Plot', 'NumberofPages', 'Published', 'Characters', 'Setting', 'Url'])
+                    tsv_writer.writerow(['bookTitle', 'bookSeries', 'bookAuthors', 'ratingValue', 'ratingCount', 'reviewCount', 'Plot', 'NumberofPages', 'Published', 'Characters', 'Setting', 'Url'])
                     tsv_writer.writerow([bookTitle, bookSeries, bookAuthors, ratingValue, ratingCount, reviewCount, Plot, NumberofPages, Published, characters, setting, Url])
 
 
