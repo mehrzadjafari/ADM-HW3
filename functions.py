@@ -10,6 +10,13 @@ import csv
 import re
 import os
 from langdetect import detect
+import nltk
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords 
+from nltk.stem import PorterStemmer
+import json
+import re
+
 
 
 
@@ -225,3 +232,161 @@ def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links =
 
     out_file.close()
     print("All tsv files generated sucessfully in " + tsv_folder + " directory") 
+
+
+
+
+
+
+def create_csv(parent_dir, tsv_folder, export_csv = True):
+    
+    """
+    
+    The function reads all .tsv files, combine them into a csv file, and export .csv file into parent directory
+    
+    Args:
+    
+    parent_dir (string) : The working directory you are working with
+    tsv_folder (string) : The name of the folder that you have stored .tsv files (Attention: It should be in your parent_dir)
+    export_csv (Boolean, Optional) : Set to False if you don't want to store the .csv file in your parent_dir. Default set to True
+    
+    Returns:
+    The .csv file of all combined .tsv files
+    
+    """
+    
+    
+    
+
+    if parent_dir[-1] != '/':
+        parent_dir += '/'
+
+
+    os.chdir(parent_dir + tsv_folder)
+
+
+    extension = 'tsv'
+    all_filenames = [i for i in glob.glob('*.{}'.format(extension))]
+    combined_csv = pd.concat([pd.read_csv(f, delimiter = '\t') for f in all_filenames ])
+    combined_csv.reset_index(inplace=True, drop= True)
+    print("The csv file has generated! With " + str(len(combined_csv)) + " number of entries.")
+    
+    if export_csv:
+        os.chdir(parent_dir)
+
+        combined_csv.to_csv( "combined_csv.csv", index=False, encoding='utf-8-sig')
+        print("The csv file has been exported to " + parent_dir)
+        return combined_csv
+    else:
+        return combined_csv
+
+
+
+
+
+
+
+
+
+def create_dictionary_plot(df, export_json = True):
+
+    """The function pre-processes all the information collected for each book by using nltk library to:
+    1. Remove stop words
+    2. Remove punctuation
+    3. Stemming
+    And creates the dictionary file of the Inverted Index 
+    
+
+    Args:
+    
+    df (dataframe) : The dataframe that has been created using 'create_csv' function.
+    export_json (Boolean) : Set to False if we don't want to export the .json file in our working directory. Default set True
+
+    Returns:
+        The dictionary file of the inverted indexes, and vocabulary.
+    
+    """
+    import nltk
+    
+
+    processed_docs = []
+    tokenizer = RegexpTokenizer(r"\w+")
+    stop_words = set(stopwords.words('english')) 
+    ps = PorterStemmer()
+
+    #for every article_i.tsv file, extract the Plot, tokenize it and preprocess it 
+
+    for i in range(len(df)):
+
+        plot = df["Plot"][i]
+        tokens = tokenizer.tokenize(plot)
+        processed_doc = []
+        for token in tokens:
+            if (token != 'Plot') & (token != '0') & (not token in stop_words):
+                processed_doc.append(ps.stem(token))
+
+        processed_docs.append(processed_doc)
+
+
+        
+    #initialize an empty dictionary
+    vocabulary = {}
+
+
+    #for every document (for every plot in our case)
+    for term_id, doc in enumerate(processed_docs,1):
+
+    #for every token in the document
+        for tok in doc:
+
+    #if the token is not present in the dictionary yet...
+            if tok not in vocabulary:
+
+    #...add it and set term_id as his id
+                vocabulary[tok] =  term_id
+
+
+
+    #initialize an empty dictionary
+    my_dict = {}
+
+
+    doc_id = 0 
+    #for every document (for every plot in our case)
+    for n_art, doc in enumerate(processed_docs):
+        directory = df["Plot"][n_art]
+
+        #increase the id of the document
+        doc_id+=n_art
+        n_tok = 0
+
+        #for every token in the document
+        for tok in doc:
+
+    #if the id of that specific token is not present in the dictionary yet...
+            if vocabulary[tok] not in my_dict:
+
+    #...add it to the dictionary as a key and let document_doc_id be one of its values:
+                my_dict[vocabulary[tok]] = ["document_"+str(doc_id)]
+
+    #else, if this token is present in the dictionary but document_doc_id is not one of his values yet...
+            elif "document_"+str(doc_id) not in my_dict.get(vocabulary[tok]):
+
+    #append document_doc_id to his values
+                my_dict[vocabulary[tok]].append("document_"+str(doc_id))
+        
+        
+    #Exporting the .json file of the dictionary
+    if export_json:
+        
+        dict_file = open("dict_file.json", "w")
+        json.dump(my_dict, dict_file)
+        dict_file.close()
+        dict_file = open("voc_file.json", "w")
+        json.dump(vocabulary, dict_file)
+        dict_file.close()
+        return my_dict, vocabulary
+    else:
+        return my_dict, vocabulary
+
+
