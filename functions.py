@@ -310,86 +310,93 @@ def create_dictionary_plot(df, export_json = True):
     """
     import nltk
     
+    #initialize an empty dictionary
+    processed_docs = {}
 
-    processed_docs = []
-    tokenizer = RegexpTokenizer(r"\w+")
+    parent_dir = "C:\\Users\\elisa\\Desktop\\Algorithmic Methods of Data Mining\\ADM-HW3\\tsv_articles\\tsv_articles"
+
+    #initialize a list that will contain the lists of tokens, one per plot 
+    tokenizer = nltk.RegexpTokenizer(r"\w+")
     stop_words = set(stopwords.words('english')) 
     ps = PorterStemmer()
 
     #for every article_i.tsv file, extract the Plot, tokenize it and preprocess it 
+    for n_art in range(1, 30001):
+	directory = "article_" + str(n_art) + ".tsv"
+	path = os.path.join(parent_dir, directory)
+	if os.path.exists(path):
+	plot = pd.read_csv(path, delimiter = '\t', usecols = ['Plot'])
+	tokens = tokenizer.tokenize(str(plot))
+	processed_doc = []
+	for token in tokens:
+		if (token != 'Plot') & (token != '0') & (not token in stop_words):
+		    processed_doc.append(ps.stem(token))
 
-    for i in range(len(df)):
+	processed_docs['document_'+str(n_art)] = processed_doc
 
-        plot = df["Plot"][i]
-        tokens = tokenizer.tokenize(plot)
-        processed_doc = []
-        for token in tokens:
-            if (token != 'Plot') & (token != '0') & (not token in stop_words):
-                processed_doc.append(ps.stem(token))
-
-        processed_docs.append(processed_doc)
-
-
-        
+	
     #initialize an empty dictionary
     vocabulary = {}
 
+    term_id = 1
 
     #for every document (for every plot in our case)
-    for term_id, doc in enumerate(processed_docs,1):
+    for doc in processed_docs.values():
 
     #for every token in the document
-        for tok in doc:
+	for tok in doc:
 
     #if the token is not present in the dictionary yet...
-            if tok not in vocabulary:
+	if tok not in vocabulary:
 
     #...add it and set term_id as his id
-                vocabulary[tok] =  term_id
+	    vocabulary[tok] =  term_id
+	    term_id += 1
 
 
+   #initialize an empty dictionary
+   inv_index1 = {}
 
-    #initialize an empty dictionary
-    my_dict = {}
+   doc_id = 0 
+   #for every document (for every plot in our case)
+   for doc in processed_docs.values():
 
-
-    doc_id = 0 
-    #for every document (for every plot in our case)
-    for n_art, doc in enumerate(processed_docs):
-        directory = df["Plot"][n_art]
-
-        #increase the id of the document
-        doc_id+=n_art
-        n_tok = 0
-
-        #for every token in the document
-        for tok in doc:
+       #increase the id of the document
+       doc_id+=1
+    
+       directory = "article_" + str(doc_id) + ".tsv"
+       path = os.path.join(parent_dir, directory)
+       if os.path.exists(path):
+        
+    #for every token in the document
+           for tok in doc:
 
     #if the id of that specific token is not present in the dictionary yet...
-            if vocabulary[tok] not in my_dict:
+               if vocabulary[tok] not in inv_index1:
 
     #...add it to the dictionary as a key and let document_doc_id be one of its values:
-                my_dict[vocabulary[tok]] = ["document_"+str(doc_id)]
+                   inv_index1[vocabulary[tok]] = ["document_"+str(doc_id)]
 
     #else, if this token is present in the dictionary but document_doc_id is not one of his values yet...
-            elif "document_"+str(doc_id) not in my_dict.get(vocabulary[tok]):
+               elif "document_"+str(doc_id) not in inv_index1.get(vocabulary[tok]):
 
     #append document_doc_id to his values
-                my_dict[vocabulary[tok]].append("document_"+str(doc_id))
+                    inv_index1[vocabulary[tok]].append("document_"+str(doc_id))
+
         
         
     #Exporting the .json file of the dictionary
     if export_json:
         
         dict_file = open("dict_file.json", "w")
-        json.dump(my_dict, dict_file)
+        json.dump(inv_index1, dict_file)
         dict_file.close()
         dict_file = open("voc_file.json", "w")
         json.dump(vocabulary, dict_file)
         dict_file.close()
-        return my_dict, vocabulary
+        return inv_index1, vocabulary
     else:
-        return my_dict, vocabulary
+        return inv_index1, vocabulary
 
 
 
@@ -410,12 +417,11 @@ def Search_Engine(query):
     my_invertedId = {}
     for tok in my_query:
         if tok in vocabulary:
-            my_invertedId[tok] = my_dict.get(vocabulary[tok])
+            my_invertedId[tok] = inv_index1.get(vocabulary[tok])
             
     #if any of the query's tokens is not present into the vocabulary, give an Error Message to the user
         elif tok not in vocabulary:
-            print("The query is not present in any plot")
-            return([])
+            return("The query is not present in any plot")
       
     #define a list of sets where each set represents the documents that contain each token of the query
     my_sets = []
@@ -430,27 +436,18 @@ def Search_Engine(query):
         result = result.intersection(my_set)
     
     if result == set():
-        print("The query is not present in any plot")
-        return([])
+        return("The query is not present in any plot")
     else:
         found = list(result)
 
-        my_dict1 = {}
-        for i in range(1,30001):
-            directory = "article_" + str(i) + ".tsv"
-            path = functions.os.path.join(parent_dir, directory)
-            if functions.os.path.exists(path):
-                my_dict1["document_"+str(i)] = "article_"+str(i)
-
-
         i = 0
         for item in found:
-            directory = my_dict1[item]+".tsv"
-            path = functions.os.path.join(parent_dir, directory)
+            directory = my_dict[item]+".tsv"
+            path = os.path.join(parent_dir, directory)
             if i == 0:
-                data = functions.pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url'])
+                data = pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url'])
             else:
-                data = data.append(functions.pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url']))
+                data = data.append(pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url']))
                
             data = data.rename(index = {0:'book_'+str(i+1)})
             
