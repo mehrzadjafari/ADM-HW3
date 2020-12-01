@@ -1,39 +1,31 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-
-
-from bs4 import BeautifulSoup
-import requests
-import lxml
-import csv
-import re
-import os
-import pandas as pd
-from langdetect import detect
 import nltk
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords 
 from nltk.stem import PorterStemmer
 import json
 import re
-
-
+import os
+import glob
+import pandas as pd
+import numpy as np
 
 
 def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links = "Links", url = "url"):
 
 
     """Extracts books information, check them with langdetect and creates the .tsv files in /tsv_articles.
-	All the files and sub-folders (i.e. tsv_folder, links and url.txt) should be stored in parent_dir.
+    All the files and sub-folders (i.e. tsv_folder, links and url.txt) should be stored in parent_dir.
 
     Args:
 
-	parent_dir (string) : The main path of your working enviorment. All of the folders and files should be here. Example : C:/Users/Desktop/ALGORITHMIC METHODS OF DATA MINING AND LABORATORY/"
+    parent_dir (string) : The main path of your working enviorment. All of the folders and files should be here. Example : C:/Users/Desktop/ALGORITHMIC METHODS OF DATA MINING AND LABORATORY/"
         pages (int, optional): Number of pages to parse. Defaults to 300.
-	tsv_articles (string, optional) : The name of the folder you are willing to store the .tsv files. Defaults to "tsv_articles"
-	links (string, optional) : The name of the main folder you have stored your html files. Defaults to "Links"
-	Urls (string, optional) : The name of the text file you have stored your html urls. Defaults to "url"
+    tsv_articles (string, optional) : The name of the folder you are willing to store the .tsv files. Defaults to "tsv_articles"
+    links (string, optional) : The name of the main folder you have stored your html files. Defaults to "Links"
+    Urls (string, optional) : The name of the text file you have stored your html urls. Defaults to "url"
 
     Returns:
         .tsv files named article_i.tsv (for each i book in the parent folder)
@@ -51,7 +43,7 @@ def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links =
     
     
     
-    for j in range(300):
+    for j in range(pages):
         
         n = j
         directory = 'Page_' + str(n + 1)
@@ -227,13 +219,14 @@ def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links =
 
                 with open(out_path_tsv, 'wt', encoding="utf8") as out_file:
                     tsv_writer = csv.writer(out_file, delimiter='\t')
-                    tsv_writer.writerow(['bookTitle', 'bookSeries', 'bookAuthors', 'ratingValue', 'ratingCount', 'reviewCount', 'Plot', 'NumberofPages', 'Published', 'Characters', 'Setting', 'Url'])
+                    tsv_writer.writerow(['bookTitle', 'bookAuthors', 'ratingValue', 'ratingCount', 'reviewCount', 'Plot', 'NumberofPages', 'Published', 'Characters', 'Setting', 'Url'])
                     tsv_writer.writerow([bookTitle, bookSeries, bookAuthors, ratingValue, ratingCount, reviewCount, Plot, NumberofPages, Published, characters, setting, Url])
 
 
     out_file.close()
+    print("All tsv files generated sucessfully in " + tsv_folder + " directory")
 
-    print("All tsv files generated sucessfully in " + tsv_folder + " directory") 
+
 
 
 
@@ -298,163 +291,157 @@ def create_dictionary_plot(df, export_json = True):
     3. Stemming
     And creates the dictionary file of the Inverted Index 
     
-
     Args:
     
     df (dataframe) : The dataframe that has been created using 'create_csv' function.
     export_json (Boolean) : Set to False if we don't want to export the .json file in our working directory. Default set True
-
     Returns:
         The dictionary file of the inverted indexes, and vocabulary.
     
     """
     import nltk
+    import json
     
+    #initialize an empty dictionary
+    processed_docs = {}
 
-    processed_docs = []
+    #initialize a list that will contain the lists of tokens, one per plot 
     tokenizer = RegexpTokenizer(r"\w+")
     stop_words = set(stopwords.words('english')) 
     ps = PorterStemmer()
 
     #for every article_i.tsv file, extract the Plot, tokenize it and preprocess it 
-
-    for i in range(len(df)):
-
-        plot = df["Plot"][i]
+    for n_art in range(len(df)):
+        plot = df['Plot'][n_art]
         tokens = tokenizer.tokenize(plot)
         processed_doc = []
         for token in tokens:
             if (token != 'Plot') & (token != '0') & (not token in stop_words):
                 processed_doc.append(ps.stem(token))
 
-        processed_docs.append(processed_doc)
+        processed_docs['document_'+str(n_art + 1)] = processed_doc
 
 
-        
     #initialize an empty dictionary
     vocabulary = {}
-
-
+    term_id = 1
     #for every document (for every plot in our case)
-    for term_id, doc in enumerate(processed_docs,1):
-
-    #for every token in the document
-        for tok in doc:
-
-    #if the token is not present in the dictionary yet...
-            if tok not in vocabulary:
-
-    #...add it and set term_id as his id
-                vocabulary[tok] =  term_id
-
-
-
-    #initialize an empty dictionary
-    my_dict = {}
-
-
-    doc_id = 0 
-    #for every document (for every plot in our case)
-    for n_art, doc in enumerate(processed_docs):
-        directory = df["Plot"][n_art]
-
-        #increase the id of the document
-        doc_id+=n_art
-        n_tok = 0
+    for doc in processed_docs.values():
 
         #for every token in the document
         for tok in doc:
 
-    #if the id of that specific token is not present in the dictionary yet...
-            if vocabulary[tok] not in my_dict:
+            #if the token is not present in the dictionary yet...
+            if tok not in vocabulary:
 
-    #...add it to the dictionary as a key and let document_doc_id be one of its values:
-                my_dict[vocabulary[tok]] = ["document_"+str(doc_id)]
+            #...add it and set term_id as his id
+                vocabulary[tok] =  term_id
+                term_id += 1
 
-    #else, if this token is present in the dictionary but document_doc_id is not one of his values yet...
-            elif "document_"+str(doc_id) not in my_dict.get(vocabulary[tok]):
 
-    #append document_doc_id to his values
-                my_dict[vocabulary[tok]].append("document_"+str(doc_id))
+   #initialize an empty dictionary
+    inv_index1 = {}
+
+
+   #for every document (for every plot in our case)
+    for doc_id ,doc in enumerate(processed_docs.values()):
+        
+
+        #for every token in the document
+        for tok in doc:
+
+            #if the id of that specific token is not present in the dictionary yet...
+            if vocabulary[tok] not in inv_index1:
+
+            #...add it to the dictionary as a key and let document_doc_id be one of its values:
+                inv_index1[vocabulary[tok]] = ["document_"+str(doc_id + 1)]
+
+            #else, if this token is present in the dictionary but document_doc_id is not one of his values yet...
+            elif "document_"+str(doc_id + 1) not in inv_index1.get(vocabulary[tok]):
+
+            #append document_doc_id to his values
+                inv_index1[vocabulary[tok]].append("document_"+str(doc_id + 1))
+
         
         
-    #Exporting the .json file of the dictionary
+    #Exporting the .json file of the dictionaries
     if export_json:
         
         dict_file = open("dict_file.json", "w")
-        json.dump(my_dict, dict_file)
+        json.dump(inv_index1, dict_file)
         dict_file.close()
         dict_file = open("voc_file.json", "w")
         json.dump(vocabulary, dict_file)
         dict_file.close()
-        return my_dict, vocabulary
+        return inv_index1, vocabulary
     else:
-        return my_dict, vocabulary
+        return inv_index1, vocabulary
 
 
 
-    print("All tsv files generated sucessfully in " + tsv_folder + " directory")
-	
-
-
-
-
-def Search_Engine(query):
+def Search_Engine1(query, df, vocabulary, inv_index1, results = 10):
+    
+    """
+    The function operates as a search engine to iterate into the Plots of book, by query entered by user.
+    
+    Args:
+    query (string) : The query that user enters to search for a book based on information in its plot
+    df (dataframe) : The pandas dataframe of .tsv book. For more information check `create_csv` function.
+    results (integer) : The number of found results that the user wants to check. Default on 10.
+    
+    Returns:
+    A dataframe of the books found by the query
+    
+    """
+    
+    import nltk
     
     #stem the tokens of the query in order to create a new query: my_query
+    tokenizer = nltk.RegexpTokenizer(r"\w+")
+    ps = PorterStemmer()
+    queryTokens = tokenizer.tokenize(query)
+    
     my_query = []
-    for tok in query:
+    for tok in queryTokens:
         my_query.append(ps.stem(tok))
 
     #create a new dictionary which contains just the keys present in my_query        
     my_invertedId = {}
     for tok in my_query:
         if tok in vocabulary:
-            my_invertedId[tok] = my_dict.get(vocabulary[tok])
+            my_invertedId[tok] = inv_index1.get(vocabulary[tok])
             
-    #if any of the query's tokens is not present into the vocabulary, give an Error Message to the user
-        elif tok not in vocabulary:
-            print("The query is not present in any plot")
-            return([])
+#if any of the query's tokens is not present into the vocabulary, give an Error Message to the user
+    if not my_invertedId:
+        return("The query is not present in any plot")
       
     #define a list of sets where each set represents the documents that contain each token of the query
     my_sets = []
-    for key in my_invertedId:
+    for key in my_invertedId.keys():
         my_sets.append(set(my_invertedId[key]))
     result = set()
 
-    for i in range(1, 30001):
-        result.add('document_'+str(i))
+    for i in range(len(df)):
+        result.add('document_'+str(i + 1))
         
     for my_set in my_sets:
         result = result.intersection(my_set)
     
-    if result == set():
-        print("The query is not present in any plot")
-        return([])
+    if not result:
+        return("The query is not present in any plot")
     else:
         found = list(result)
-
-        my_dict1 = {}
-        for i in range(1,30001):
-            directory = "article_" + str(i) + ".tsv"
-            path = functions.os.path.join(parent_dir, directory)
-            if functions.os.path.exists(path):
-                my_dict1["document_"+str(i)] = "article_"+str(i)
-
-
-        i = 0
-        for item in found:
-            directory = my_dict1[item]+".tsv"
-            path = functions.os.path.join(parent_dir, directory)
-            if i == 0:
-                data = functions.pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url'])
-            else:
-                data = data.append(functions.pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url']))
-               
-            data = data.rename(index = {0:'book_'+str(i+1)})
-            
-            i+=1
-                            
-        return(data)
-
+        
+    indexes = []
+    for i in range(len(found)):
+        num = int(re.findall(r'\d+', found[i])[0])
+        ind = num - 1
+        indexes.append(ind)
+        
+    if len(indexes) >= results:
+        indexes = indexes[:results]
+        return(df.loc[indexes])
+        
+    else:
+        return(df.loc[indexes])
+                  
