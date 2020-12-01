@@ -11,6 +11,7 @@ import os
 import glob
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
 
 def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links = "Links", url = "url"):
@@ -305,21 +306,12 @@ def create_dictionary_plot(df, export_json = True):
     #initialize an empty dictionary
     processed_docs = {}
 
-
     #initialize a list that will contain the lists of tokens, one per plot 
     tokenizer = RegexpTokenizer(r"\w+")
-
-
-    parent_dir = "C:\\Users\\elisa\\Desktop\\Algorithmic Methods of Data Mining\\ADM-HW3\\tsv_articles\\tsv_articles"
-
-    #initialize a list that will contain the lists of tokens, one per plot 
-    tokenizer = nltk.RegexpTokenizer(r"\w+")
-
     stop_words = set(stopwords.words('english')) 
     ps = PorterStemmer()
 
     #for every article_i.tsv file, extract the Plot, tokenize it and preprocess it 
-
     for n_art in range(len(df)):
         plot = df['Plot'][n_art]
         tokens = tokenizer.tokenize(plot)
@@ -371,70 +363,6 @@ def create_dictionary_plot(df, export_json = True):
             #append document_doc_id to his values
                 inv_index1[vocabulary[tok]].append("document_"+str(doc_id + 1))
 
-
-    for n_art in range(1, 30001):
-	directory = "article_" + str(n_art) + ".tsv"
-	path = os.path.join(parent_dir, directory)
-	if os.path.exists(path):
-	plot = pd.read_csv(path, delimiter = '\t', usecols = ['Plot'])
-	tokens = tokenizer.tokenize(str(plot))
-	processed_doc = []
-	for token in tokens:
-		if (token != 'Plot') & (token != '0') & (not token in stop_words):
-		    processed_doc.append(ps.stem(token))
-
-	processed_docs['document_'+str(n_art)] = processed_doc
-
-	
-    #initialize an empty dictionary
-    vocabulary = {}
-
-    term_id = 1
-
-    #for every document (for every plot in our case)
-    for doc in processed_docs.values():
-
-    #for every token in the document
-	for tok in doc:
-
-    #if the token is not present in the dictionary yet...
-	if tok not in vocabulary:
-
-    #...add it and set term_id as his id
-	    vocabulary[tok] =  term_id
-	    term_id += 1
-
-
-   #initialize an empty dictionary
-   inv_index1 = {}
-
-   doc_id = 0 
-   #for every document (for every plot in our case)
-   for doc in processed_docs.values():
-
-       #increase the id of the document
-       doc_id+=1
-    
-       directory = "article_" + str(doc_id) + ".tsv"
-       path = os.path.join(parent_dir, directory)
-       if os.path.exists(path):
-        
-    #for every token in the document
-           for tok in doc:
-
-    #if the id of that specific token is not present in the dictionary yet...
-               if vocabulary[tok] not in inv_index1:
-
-    #...add it to the dictionary as a key and let document_doc_id be one of its values:
-                   inv_index1[vocabulary[tok]] = ["document_"+str(doc_id)]
-
-    #else, if this token is present in the dictionary but document_doc_id is not one of his values yet...
-               elif "document_"+str(doc_id) not in inv_index1.get(vocabulary[tok]):
-
-    #append document_doc_id to his values
-                    inv_index1[vocabulary[tok]].append("document_"+str(doc_id))
-
-
         
         
     #Exporting the .json file of the dictionaries
@@ -446,10 +374,12 @@ def create_dictionary_plot(df, export_json = True):
         dict_file = open("voc_file.json", "w")
         json.dump(vocabulary, dict_file)
         dict_file.close()
-        return inv_index1, vocabulary
+        dict_file = open("doc_file.json", "w")
+        json.dump(processed_docs, dict_file)
+        dict_file.close()
+        return inv_index1, vocabulary, processed_docs
     else:
-        return inv_index1, vocabulary
-
+        return inv_index1, vocabulary, processed_docs
 
 
 
@@ -484,15 +414,10 @@ def Search_Engine1(query, df, vocabulary, inv_index1, results = 10):
     for tok in my_query:
         if tok in vocabulary:
             my_invertedId[tok] = inv_index1.get(vocabulary[tok])
-
+            
 #if any of the query's tokens is not present into the vocabulary, give an Error Message to the user
     if not my_invertedId:
         return("The query is not present in any plot")
-
-    #if any of the query's tokens is not present into the vocabulary, give an Error Message to the user
-        elif tok not in vocabulary:
-            return("The query is not present in any plot")
-
       
     #define a list of sets where each set represents the documents that contain each token of the query
     my_sets = []
@@ -506,7 +431,6 @@ def Search_Engine1(query, df, vocabulary, inv_index1, results = 10):
     for my_set in my_sets:
         result = result.intersection(my_set)
     
-
     if not result:
         return("The query is not present in any plot")
     else:
@@ -526,23 +450,94 @@ def Search_Engine1(query, df, vocabulary, inv_index1, results = 10):
         return(df.loc[indexes])
                   
 
-    if result == set():
-        return("The query is not present in any plot")
-    else:
-        found = list(result)
 
-        i = 0
-        for item in found:
-            directory = my_dict[item]+".tsv"
-            path = os.path.join(parent_dir, directory)
-            if i == 0:
-                data = pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url'])
+
+def create_invert_index2(n_docs, inv_index1, processed_docs, export_json = False):
+    
+    """
+    The function creates the second inverted index dictionary for search engine.
+    
+    
+    Args:
+    
+    n_docs (integer): Number of items in our main dataframe of books (i.e. len(df))
+    inv_index1 (Dictionary): The first inverted index dictionary, created by create_dictionary_plot function.
+    processed_docs (Dictionary): The processed dictionary using plots of books, create by create_dictionary_plot function.
+    export_json (Boolean): Set to False if we don't want to export the .json file in our working directory. Default set True.
+    
+    Returns:
+    
+    Second inverted index dictionary
+    
+    """
+
+    #initialize an empty dictionary
+    inv_index2 = {}
+
+
+
+    #for every term_id belonging to the dictionary my_dict
+    for term_id in tqdm(inv_index1):
+        line = [term_id, inv_index1[term_id]]
+        N = len(inv_index1[term_id]) #number of documents with the term corrisponding to the id term_id
+
+        #for every document that contains that term
+        for doc in line[1]:
+            tf = processed_docs[doc].count(list(vocabulary.keys())[term_id-1]) #term frequency
+            Idf = np.log(n_docs/N) #inverse document frequency
+            tfIdf = tf*Idf
+
+            if term_id not in inv_index2:
+                inv_index2[term_id] = [(doc,tfIdf)]
             else:
-                data = data.append(pd.read_csv(path, delimiter = '\t', usecols = ['bookTitle', 'Plot', 'Url']))
-               
-            data = data.rename(index = {0:'book_'+str(i+1)})
+                inv_index2[term_id].append((doc,tfIdf))
             
-            i+=1
-                            
-        return(data)
+    return inv_index2
+                
 
+def create_similarity_dictionary(inv_index2):
+    
+    """
+    The function creates the dictionary for Cosine Similarity search engine.
+    
+    
+    Args:
+    
+    inv_index2 (Dictionary): The second inverted index dictionary, created by create_invert_index2 function.
+    
+    Returns:
+    
+    Cosine Similarity dictionary
+    
+    """
+    
+    my_dict = {}
+    for i in range(len(df_tsv)):
+        my_dict["document_"+str(i + 1)] = i
+                
+    #initialize an empty dictionary D that will contain for each document the norm of its tfIdf
+    dictSimilarity = {}
+
+    #for every document
+    for document in tqdm(my_dict):
+
+        for key in inv_index2:
+
+            for doc in inv_index2[key]:
+
+                if doc[0] == document:
+
+                    if document not in dictSimilarity:
+
+                        dictSimilarity[document] = [doc[1]]
+
+                    else:
+
+                        dictSimilarity[document].append(doc[1])  
+
+        if document in dictSimilarity:
+
+            dictSimilarity[document] = np.linalg.norm(dictSimilarity[document])
+            
+
+    return dictSimilarity
