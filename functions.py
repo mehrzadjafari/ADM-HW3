@@ -12,6 +12,8 @@ import glob
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+import pickle
+nltk.download('stopwords')
 
 
 def info_parser(parent_dir, pages = 300, tsv_articles = "tsv_articles" , links = "Links", url = "url"):
@@ -284,7 +286,7 @@ def create_csv(parent_dir, tsv_folder, export_csv = True):
 
 
 
-def create_dictionary_plot(df, export_json = True):
+def create_dictionary_plot(df, export_pickle = False):
 
     """The function pre-processes all the information collected for each book by using nltk library to:
     1. Remove stop words
@@ -365,17 +367,17 @@ def create_dictionary_plot(df, export_json = True):
 
         
         
-    #Exporting the .json file of the dictionaries
-    if export_json:
+    #Exporting the .pickle file of the dictionaries
+    if export_pickle:
         
-        dict_file = open("dict_file.json", "w")
-        json.dump(inv_index1, dict_file)
+        dict_file = open("dict_file", "wb")
+        pickle.dump(inv_index1, dict_file)
         dict_file.close()
-        dict_file = open("voc_file.json", "w")
-        json.dump(vocabulary, dict_file)
+        dict_file = open("voc_file", "wb")
+        pickle.dump(vocabulary, dict_file)
         dict_file.close()
-        dict_file = open("doc_file.json", "w")
-        json.dump(processed_docs, dict_file)
+        dict_file = open("doc_file", "wb")
+        pickle.dump(processed_docs, dict_file)
         dict_file.close()
         return inv_index1, vocabulary, processed_docs
     else:
@@ -452,7 +454,7 @@ def Search_Engine1(query, df, vocabulary, inv_index1, results = 10):
 
 
 
-def create_invert_index2(n_docs, inv_index1, processed_docs, export_json = False):
+def create_invert_index2(n_docs, inv_index1, processed_docs, export_pickle = True):
     
     """
     The function creates the second inverted index dictionary for search engine.
@@ -491,11 +493,19 @@ def create_invert_index2(n_docs, inv_index1, processed_docs, export_json = False
                 inv_index2[term_id] = [(doc,tfIdf)]
             else:
                 inv_index2[term_id].append((doc,tfIdf))
-            
-    return inv_index2
+
+    if export_pickle:
+
+      dict_file = open("inv2_file", "wb")
+      pickle.dump(inv_index2, dict_file)
+      dict_file.close()
+      return inv_index2
+    else:
+           
+      return inv_index2
                 
 
-def create_similarity_dictionary(inv_index2):
+def create_similarity_dictionary(inv_index2, export_pickle = True):
     
     """
     The function creates the dictionary for Cosine Similarity search engine.
@@ -539,5 +549,113 @@ def create_similarity_dictionary(inv_index2):
 
             dictSimilarity[document] = np.linalg.norm(dictSimilarity[document])
             
+    if export_pickle:
+      
+      dict_file = open("dictsim_file", "wb")
+      pickle.dump(dictSimilarity, dict_file)
+      dict_file.close()
 
-    return dictSimilarity
+      return dictSimilarity
+    else:
+           
+      return dictSimilarity
+
+
+def Search_Engine2(query, df, inv_index1, inv_index2, dictSimilarity, vocabulary, results = 10):
+    
+    """
+    The function operates as a search engine to iterate into the Plots of book, by query entered by user using new score defined.
+    For more info search : Cosine similarity score
+    
+    Args:
+    query (string) : The query that user enters to search for a book based on information in its plot.
+    df (dataframe) : The pandas dataframe of .tsv book. For more information check `create_csv` function.
+    inv_index1 (dictionary) : The first inverted index dictionary, created by create_dictionary_plot function.
+    inv_index2 (dictionary) : The second inverted index dictionary, created by create_invert_index2 function.
+    dictSimilarity (dictionary) : The Cosine similarity dictionary, created by create_similarity_dictionary function.
+    vocabulary (dictionary) : The vocabulary dictionary, created by create_dictionary_plot function.
+    results (integer) : The number of found results that the user wants to check. Default on 10.
+    
+    Returns:
+    A dataframe of the books found by the query based on their similarity to user's query.
+    
+    """
+    
+    
+    tokenizer = nltk.RegexpTokenizer(r"\w+")
+    ps = PorterStemmer()
+    queryTokens = tokenizer.tokenize(query)
+    
+    #stem the tokens of the query in order to create a new query: my_query
+    my_query = []
+    for tok in queryTokens:
+        my_query.append(ps.stem(tok))
+
+    #create a new dictionary which contains just the keys present in my_query        
+    my_invertedId = {}
+    for tok in my_query:
+        if tok in vocabulary:
+            my_invertedId[tok] = inv_index1.get(vocabulary[tok])
+
+    #if any of the query's tokens is not present into the vocabulary, give an Error Message to the user
+        elif tok not in vocabulary:
+            return("The query is not present in any plot")
+      
+    #define a list of sets where each set represents the documents that contain each token of the query
+    my_sets = []
+    for key in my_invertedId:
+        my_sets.append(set(my_invertedId[key]))
+    result = set()
+
+    for i in range(len(df)):
+        result.add('document_'+str(i + 1))
+        
+    for my_set in my_sets:
+        result = result.intersection(my_set)
+    
+    if result == set():
+        return("The query is not present in any plot")
+    else:
+        found = list(result)
+        
+        similarityList = []
+        i = 0
+        for item in found:
+            
+            similarity = 0
+            for term in my_query:
+                
+                for doc in inv_index2[vocabulary[term]]:
+        
+                    if doc[0] == item:
+                    
+                        if dictSimilarity[item] != 0:
+
+                            similarity += doc[1]/dictSimilarity[item]
+                            
+            similarity = round(similarity, 2)
+            similarityList.append(similarity)
+        
+    indexes = []
+    
+    for i in range(len(found)):
+        
+        num = int(re.findall(r'\d+', found[i])[0])
+        
+        ind = num - 1
+        
+        indexes.append(ind)
+        
+    if len(indexes) >= results:
+        
+        indexes = indexes[:results]
+        similarityList = similarityList[:results]
+        df = df.loc[indexes]
+        df["Similarity"] = similarityList
+        
+        return(df.sort_values("Similarity", ascending= False))
+        
+    else:
+        df = df.loc[indexes]
+        df["Similarity"] = similarityList
+        return(df.sort_values("Similarity", ascending= False))    
