@@ -637,6 +637,9 @@ def Search_Engine2(query, df, inv_index1, inv_index2, dictSimilarity, vocabulary
             similarityList.append(similarity)
         
     indexes = []
+    for i in range(len(similarityList)):
+        similarityList[i] = (similarityList[i] - min(similarityList)) / (max(similarityList) - min(similarityList))
+        similarityList[i] = round(similarityList[i], 2)
     
     for i in range(len(found)):
         
@@ -645,17 +648,17 @@ def Search_Engine2(query, df, inv_index1, inv_index2, dictSimilarity, vocabulary
         ind = num - 1
         
         indexes.append(ind)
+    
+    
+    df = df.loc[indexes]
+    df["Similarity"] = similarityList
+    df.sort_values("Similarity", ascending= False, inplace = True)
+
         
     if len(indexes) >= results:
         
-        indexes = indexes[:results]
-        similarityList = similarityList[:results]
-        df = df.loc[indexes]
-        df["Similarity"] = similarityList
-        
-        return(df.sort_values("Similarity", ascending= False))
+        return(df[:results])
         
     else:
-        df = df.loc[indexes]
-        df["Similarity"] = similarityList
-        return(df.sort_values("Similarity", ascending= False))    
+
+        return(df)    
