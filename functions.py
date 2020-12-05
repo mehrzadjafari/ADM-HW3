@@ -437,7 +437,7 @@ def Search_Engine1(query, df, vocabulary, inv_index1, results = 10):
         return("The query is not present in any plot")
     else:
         found = list(result)
-        
+    df = df[["bookTitle", "Plot", "Url"]]
     indexes = []
     for i in range(len(found)):
         num = int(re.findall(r'\d+', found[i])[0])
@@ -653,6 +653,7 @@ def Search_Engine2(query, df, inv_index1, inv_index2, dictSimilarity, vocabulary
     df = df.loc[indexes]
     df["Similarity"] = similarityList
     df.sort_values("Similarity", ascending= False, inplace = True)
+    df = df[["bookTitle", "Plot", "Url", "Similarity"]]
 
         
     if len(indexes) >= results:
@@ -662,3 +663,125 @@ def Search_Engine2(query, df, inv_index1, inv_index2, dictSimilarity, vocabulary
     else:
 
         return(df)    
+
+
+
+def Search_Engine_NewScore(query, df, inv_index1, inv_index2, vocabulary, results = 10):
+    
+    """
+    The function operates as a search engine to iterate into the Plots of book, by query entered by user using new score defined.
+    The scoring system works as user enters more information about the publishing year and number of pages of desired book.
+    
+    Args:
+    query (string) : The query that user enters to search for a book based on information in its plot.
+    df (dataframe) : The pandas dataframe of .tsv book. For more information check `create_csv` function.
+    inv_index1 (dictionary) : The first inverted index dictionary, created by create_dictionary_plot function.
+    inv_index2 (dictionary) : The second inverted index dictionary, created by create_invert_index2 function.
+    vocabulary (dictionary) : The vocabulary dictionary, created by create_dictionary_plot function.
+    results (integer) : The number of found results that the user wants to check. Default on 10.
+    
+    Returns:
+    A dataframe of the books found by the query based on their similarity to user's query and extra values entered by the user.
+    
+    """
+    
+    
+    tokenizer = nltk.RegexpTokenizer(r"\w+")
+    ps = PorterStemmer()
+    queryTokens = tokenizer.tokenize(query)
+    
+    #stem the tokens of the query in order to create a new query: my_query
+    my_query = []
+    for tok in queryTokens:
+        my_query.append(ps.stem(tok))
+
+    #create a new dictionary which contains just the keys present in my_query        
+    my_invertedId = {}
+    for tok in my_query:
+        if tok in vocabulary:
+            my_invertedId[tok] = inv_index1.get(vocabulary[tok])
+
+    #if any of the query's tokens is not present into the vocabulary, give an Error Message to the user
+        elif tok not in vocabulary:
+            return("The query is not present in any plot")
+      
+    #define a list of sets where each set represents the documents that contain each token of the query
+    my_sets = []
+    for key in my_invertedId:
+        my_sets.append(set(my_invertedId[key]))
+    result = set()
+
+    for i in range(len(df)):
+        result.add('document_'+str(i + 1))
+        
+    for my_set in my_sets:
+        result = result.intersection(my_set)
+    
+    if result == set():
+        return("The query is not present in any plot")
+    else:
+        found = list(result)
+        
+    indexes = []        
+    for i in range(len(found)):
+        
+        num = int(re.findall(r'\d+', found[i])[0])
+        
+        ind = num - 1
+        
+        indexes.append(ind)        
+    
+    df = df.loc[indexes]
+    df.dropna(subset=['NumberofPages', 'Published'], inplace = True)
+    df = df.reset_index()
+    df = df.rename(columns={'index': 'book_index'})
+    
+    user1 = input("Do you want to use our new scoring method? [Y/N] :")
+    
+    if (user1.lower() == "y") | (user1.lower() == "yes"):
+        
+        usernum = int(input("How many pages does your desired book have? (approximately) ->"))
+        userpub = int(input("What year does the book published? (approximately) ->"))
+        
+
+        numdif = []
+        pubdif = []
+        for i in range(len(df)):
+
+            num = int(re.findall(r'\d+', df["NumberofPages"][i])[0])
+            numdif.append(abs(num - usernum))
+            pub = int(re.findall(r'\d\d\d\d', df["Published"][i])[0])
+            pubdif.append(abs(pub - userpub))
+        
+        maxnum = max(numdif)
+        maxpub = max(pubdif)
+        
+        similarityList = []
+        for i in range(len(df)):
+            
+            similarity1 = 1 - (numdif[i] / maxnum)
+            similarity2 = 1 - (pubdif[i] / maxpub)
+            similarity = (similarity1 + similarity2) / 2
+            similarityList.append(round(similarity, 2))
+
+
+        df["Similarity"] = similarityList
+        df.sort_values("Similarity", ascending= False, inplace = True)
+        df.set_index(["book_index"], inplace = True)
+        df = df[["bookTitle", "Plot", "Url", "Similarity"]]
+        if len(indexes) >= results:
+
+            return(df[:results])
+
+        else:
+
+            return(df)    
+    else:
+    
+        if len(indexes) >= results:
+
+            return(df[:results])
+
+        else:
+
+            return(df) 
