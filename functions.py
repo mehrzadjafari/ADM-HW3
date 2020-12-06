@@ -272,7 +272,7 @@ def create_csv(parent_dir, tsv_folder, export_csv = True):
     if export_csv:
         os.chdir(parent_dir)
 
-        combined_csv.to_csv( "combined_csv.csv", index=False, encoding='utf-8-sig')
+        combined_csv.to_csv( "files/combined_csv.csv", index=False, encoding='utf-8-sig')
         print("The csv file has been exported to " + parent_dir)
         return combined_csv
     else:
@@ -286,7 +286,7 @@ def create_csv(parent_dir, tsv_folder, export_csv = True):
 
 
 
-def create_dictionary_plot(df, export_pickle = False):
+def create_dictionary_plot(df, export_pickle = True):
 
     """The function pre-processes all the information collected for each book by using nltk library to:
     1. Remove stop words
