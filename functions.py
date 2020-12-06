@@ -832,7 +832,7 @@ def recur_call(string_input):
 
 
 
-def find_longest_subsequence(String_input):
+def find_longest_subsequence(String_input, alphabet):
     maximum = []       
    
     for i in range(0,len(String_input)):                #N times
