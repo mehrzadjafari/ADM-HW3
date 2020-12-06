@@ -5,17 +5,24 @@
  </p>
 
 
-**Goal of the homework**: Build a search engine over the "best books ever" list of [GoodReads](https://www.goodreads.com/). Unless differently specified, all the functions must be implemented from scratch.
+**Goal of the homework**: Build a search engine over the "best books ever" list of [GoodReads](https://www.goodreads.com/). Unless differently specified, all the functions must be implemented from scratch. [Main Link](https://github.com/CriMenghini/ADM/tree/master/2020/Homework_3)
 
 
-## 1. Data collection :
 
-For this homework, there is no provided dataset, but you have to build your own. Your search engine will run on text documents. So, here we detail the procedure to follow for the data collection.
+## Main Steps:
+    > 1. Data collection
+    > 2. Search Engine
+    > 3. Define a new score!
+    > 4. Make a nice visualization!
+    > 5. Algorithmic Question
+    > 6. BONUS
 
-### 1.1. Get the list of books :
 
-We start from the list of books to include in your corpus of documents. In particular, we focus on the  [best books ever list](https://www.goodreads.com/list/show/1.Best_Books_Ever?page=1). From this list we want to **collect the url** associated to each book in the list. As you realize, the list is long and splitted in many pages. We ask you to retrieve only the urls of the books listed in the first 300 pages.
+## The repository consists of the following files:
 
-The output of this step is a `.txt` file whose single line corresponds to a book's url.
+1. __`ADM-HW3.ipynb`__: 
+	> A Jupyter notebook which provides the solutions to all questions. The notebook consists of outputs, comments, theoretical answers and further explanations.
+2. __`functions.py`__:
+    > A Python script containing all the functions used in the `ADM-HW3.ipynb`.
 
 
