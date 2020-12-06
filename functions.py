@@ -785,3 +785,68 @@ def Search_Engine_NewScore(query, df, inv_index1, inv_index2, vocabulary, result
         else:
 
             return(df) 
+        
+        
+        
+def recur(string_input , n): 
+  
+    #to read and write a global variable inside a function.
+    global max_val 
+  
+    # if length of array is 1 
+    if n == 1 : 
+        return 1
+  
+    # max_ is the length of longest sequence. 
+    max_ = 1
+  
+    #Recursive loop
+    for i in range(1, n): 
+        result = recur(string_input , i)
+              
+        if string_input[i-1] < string_input[n-1] and result+1 > max_: 
+            max_ = result +1
+
+    # Compare max_ with overall maximum. And update the overall maximum if needed 
+    max_val = max(max_val , max_) 
+      
+    return max_ 
+  
+    
+    
+def recur_call(string_input): 
+  
+    # to allow the access of global variable 
+    global max_val 
+  
+    # lenght of arr 
+    len_n = len(string_input) 
+  
+    # maximum variable holds the result 
+    max_val = 1
+  
+    #Recur will return the maximum length of continous substring
+    recur(string_input , len_n) 
+  
+    return max_val 
+
+
+
+def find_longest_subsequence(String_input):
+    maximum = []       
+   
+    for i in range(0,len(String_input)):                #N times
+        sequence=[]                                     #O(1)
+        first=String_input[i]                           #O(1)
+        sequence.append(first) 
+        
+        for letter in String_input[i+1:]:               #N 
+
+            if alphabet[first] < alphabet[letter]:     #O(1)
+                sequence.append(letter)                 #O(1)
+                first=letter                            #O(1)
+
+            if len(maximum) <len(sequence):               #O(1)
+                maximum=sequence                        #O(1)
+                
+    return maximum                                    #O(1)
